@@ -699,16 +699,6 @@ function renderConnectionStatus() {
       : `<span class="chip conn-local"><span class="conn-dot conn-dot--local"></span> Local demo mode</span>`;
   }
 
-  const appBanner = $('#connBanner');
-  const pubBanner = $('#publicConnBanner');
-  const setupMsg = `
-    <span>Running in <strong>local demo mode</strong> — data &amp; logins are stored only in this browser.
-    Connect a real backend by adding your Firebase config in <code>script.js</code>.</span>`;
-
-  if (appBanner) { appBanner.innerHTML = ok ? '' : setupMsg; appBanner.hidden = ok; }
-  if (pubBanner) { pubBanner.innerHTML = ok ? '' : setupMsg; pubBanner.hidden = ok; }
-}
-
 async function init() {
   initFirebase();
   state.settings = await DB.getSettings();
