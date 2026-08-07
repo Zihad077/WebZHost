@@ -15,16 +15,15 @@
 
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (required) -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-  <!-- ============ APP SHELL (hidden until login/dashboard) ============ -->
+  <!-- ============ APP SHELL ============ -->
   <div class="app-shell" id="appShell" hidden>
-
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar__brand">
@@ -76,7 +75,7 @@
       </nav>
 
       <div class="sidebar__footer">
-        <div class="sidebar__conn" id="connStatus" title="Storage / auth backend"></div>
+        <div class="sidebar__conn" id="connStatus"></div>
         <div class="user-chip">
           <div class="user-chip__avatar" id="sidebarUserAvatar">U</div>
           <div class="user-chip__meta">
@@ -92,7 +91,6 @@
     </aside>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- Main area -->
     <div class="main">
       <div class="conn-banner" id="connBanner" hidden></div>
 
@@ -108,7 +106,7 @@
             <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
           <button class="icon-btn" id="notifTrigger" aria-label="Notifications" title="Notifications">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 21a2 2 0 004 0" stroke="currentColor" stroke-width="1.8"/></svg>
+            <svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M10 21a2 2 0 004 0" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
             <span class="topbar__dot"></span>
           </button>
         </div>
@@ -237,6 +235,7 @@
     <div class="loading-spinner"></div>
   </div>
 
+  <!-- ============ SCRIPTS ============ -->
   <script src="script.js"></script>
 </body>
 </html>
