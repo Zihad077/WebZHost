@@ -63,7 +63,7 @@ const currentPlan = () => CONFIG.plans[planKey()] || CONFIG.plans.free;
 const isAdminUser = () => !!(state?.user && state.user.email === CONFIG.admin.email);
 
 /* ======================================================================
-   1. ICONS (COMPLETE)
+   1. ICONS (সম্পূর্ণ)
    ====================================================================== */
 const ICONS = {
   dashboard: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="5" rx="2" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="12" width="7" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="16" width="7" height="5" rx="2" stroke="currentColor" stroke-width="1.8"/></svg>',
@@ -2707,4 +2707,4 @@ window.addEventListener('keydown', (e) => {
     if (state.adminMode) return;
     openAdminGate();
   }
-})
+});
