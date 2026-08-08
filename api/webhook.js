@@ -11,19 +11,21 @@ if (!admin.apps.length) {
   });
 }
 
-const db = admin.firestore();
+// Connect Specifically to your Custom Database 'webzhost'
+const { getFirestore } = require('firebase-admin/firestore');
+const db = getFirestore('webzhost');
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(200).send('JavaScript Webhook Engine Ready');
+  if (req.method !== 'POST') return res.status(200).send('WebzHost JS Engine Active!');
 
   const { botId } = req.query;
   const update = req.body;
 
-  if (!botId || !update) return res.status(400).send('Bad Request');
+  if (!botId || !update) return res.status(400).send('Missing Parameters');
 
   try {
     const botDoc = await db.collection('bots').doc(botId).get();
-    if (!botDoc.exists) return res.status(404).send('Bot Not Found');
+    if (!botDoc.exists) return res.status(404).send('Bot Document Not Found');
 
     const { token, code } = botDoc.data();
     if (!update.message) return res.status(200).send('OK');
@@ -44,7 +46,7 @@ export default async function handler(req, res) {
 
     return res.status(200).send('OK');
   } catch (error) {
-    console.error('JS Execution Error:', error);
-    return res.status(200).send('Handled');
+    console.error('JS Error:', error);
+    return res.status(200).send('Handled Error: ' + error.message);
   }
 }
