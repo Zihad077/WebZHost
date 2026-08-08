@@ -1,0 +1,9 @@
+{
+  "name": "webzhost-serverless",
+  "version": "1.0.0",
+  "description": "Telegram Dynamic Bot Hosting Platform",
+  "main": "index.html",
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}
