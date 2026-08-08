@@ -1,31 +1,47 @@
-const admin = require('firebase-admin');
-const vm = require('vm');
+let db = null;
+let initError = null;
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: "bothostz",
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, '\n')
-    })
-  });
+// Crash-Proof Initialization
+try {
+  const admin = require('firebase-admin');
+  const { getFirestore } = require('firebase-admin/firestore');
+
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+
+  if (!privateKey || !clientEmail) {
+    initError = "Vercel Environment Variables Missing (FIREBASE_PRIVATE_KEY or FIREBASE_CLIENT_EMAIL)";
+  } else {
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: "bothostz",
+          clientEmail: clientEmail,
+          privateKey: privateKey.replace(/\\n/g, '\n')
+        })
+      });
+    }
+    db = getFirestore('webzhost');
+  }
+} catch (e) {
+  initError = "JS Init Exception: " + e.message;
 }
 
-// Connect Specifically to your Custom Database 'webzhost'
-const { getFirestore } = require('firebase-admin/firestore');
-const db = getFirestore('webzhost');
-
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(200).send('WebzHost JS Engine Active!');
+  if (initError) {
+    return res.status(200).send("Config Issue: " + initError);
+  }
+
+  if (req.method !== 'POST') return res.status(200).send('WebzHost JS Engine Active & Ready!');
 
   const { botId } = req.query;
   const update = req.body;
 
-  if (!botId || !update) return res.status(400).send('Missing Parameters');
+  if (!botId || !update) return res.status(200).send('Missing Parameters');
 
   try {
     const botDoc = await db.collection('bots').doc(botId).get();
-    if (!botDoc.exists) return res.status(404).send('Bot Document Not Found');
+    if (!botDoc.exists) return res.status(200).send('Bot Document Not Found in DB');
 
     const { token, code } = botDoc.data();
     if (!update.message) return res.status(200).send('OK');
@@ -41,12 +57,12 @@ export default async function handler(req, res) {
 
     const sandbox = { update, reply, console, fetch };
 
+    const vm = require('vm');
     vm.createContext(sandbox);
     vm.runInContext(code, sandbox, { timeout: 2500 });
 
     return res.status(200).send('OK');
   } catch (error) {
-    console.error('JS Error:', error);
-    return res.status(200).send('Handled Error: ' + error.message);
+    return res.status(200).send('Execution Handled Error: ' + error.message);
   }
 }
