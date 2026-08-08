@@ -22,7 +22,6 @@ try:
         else:
             private_key = private_key.replace('\\n', '\n')
             
-            # Added Google's required 'token_uri' & 'auth_uri' fields
             cred = credentials.Certificate({
                 "type": "service_account",
                 "project_id": "bothostz",
@@ -92,14 +91,18 @@ class handler(BaseHTTPRequestHandler):
             token = bot_data.get('token')
             code = bot_data.get('code')
 
+            # Execution & Auto Error Feedback Logic
             if 'message' in update and 'text' in update['message']:
                 chat_id = update['message']['chat']['id']
 
                 def reply(text):
-                    requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json={
-                        "chat_id": chat_id,
-                        "text": str(text)
-                    })
+                    try:
+                        requests.post(f"https://api.telegram.org/bot{token}/sendMessage", json={
+                            "chat_id": chat_id,
+                            "text": str(text)
+                        })
+                    except Exception as req_e:
+                        print("Send Message Error:", req_e)
 
                 sandbox = {
                     "update": update,
@@ -107,7 +110,11 @@ class handler(BaseHTTPRequestHandler):
                     "print": print
                 }
 
-                exec(code, sandbox)
+                # Try executing Python code; if code fails, send error to Telegram!
+                try:
+                    exec(code, sandbox)
+                except Exception as py_err:
+                    reply(f"⚠️ Python Script Execution Error:\n\n{str(py_err)}")
 
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
