@@ -1,3 +1,4 @@
+# api/webhook_python.py
 from http.server import BaseHTTPRequestHandler
 import json
 import os
@@ -20,11 +21,15 @@ try:
             init_error = "Vercel Environment Variables Missing (FIREBASE_PRIVATE_KEY or FIREBASE_CLIENT_EMAIL)"
         else:
             private_key = private_key.replace('\\n', '\n')
+            
+            # Added Google's required 'token_uri' & 'auth_uri' fields
             cred = credentials.Certificate({
                 "type": "service_account",
                 "project_id": "bothostz",
                 "private_key": private_key,
-                "client_email": client_email
+                "client_email": client_email,
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth"
             })
             firebase_admin.initialize_app(cred)
 
