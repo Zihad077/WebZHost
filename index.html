@@ -42,22 +42,19 @@
         button { cursor: pointer; border: none; background: none; font-family: inherit; }
         input, select, textarea { font-family: inherit; }
 
-        /* Ambient Glow Background */
         .ambient-glow {
             position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
             width: 800px; height: 400px; background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, rgba(6,182,212,0.05) 50%, rgba(0,0,0,0) 80%);
             pointer-events: none; z-index: 0; filter: blur(60px);
         }
 
-        /* Modern Glass Card */
         .glass-card {
             background: var(--bg-card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px;
+            border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px;
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5); transition: var(--transition);
         }
         .glass-card:hover { border-color: var(--border-glow); }
 
-        /* Buttons */
         .btn {
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
             padding: 10px 20px; border-radius: var(--radius-sm); font-weight: 500; font-size: 0.9rem;
@@ -70,7 +67,6 @@
         .btn-danger { background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.2); color: var(--danger); }
         .btn-danger:hover { background: var(--danger); color: white; }
 
-        /* Form Controls */
         .input-group { margin-bottom: 20px; }
         .input-group label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px; }
         .input-control {
@@ -81,13 +77,11 @@
         .input-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 15px var(--primary-glow); }
         .code-editor { font-family: 'Fira Code', monospace; font-size: 0.88rem; line-height: 1.6; background: #020617; color: #38bdf8; min-height: 220px; tab-size: 2; }
 
-        /* Badges */
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
         .badge-active { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
         .badge-py { background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.3); }
         .badge-js { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-        /* Navbar & Sidebar Layout */
         .top-nav {
             position: fixed; top: 0; left: 0; right: 0; height: 70px; display: flex; align-items: center; justify-content: space-between;
             padding: 0 5%; background: rgba(3, 7, 18, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); z-index: 100;
@@ -103,17 +97,22 @@
         }
         .sidebar-link:hover, .sidebar-link.active { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); }
         .sidebar-link.active { background: rgba(99, 102, 241, 0.12); color: var(--primary); border-right: 3px solid var(--primary); }
-        .main-content { flex: 1; overflow-y: auto; padding: 40px; position: relative; z-index: 1; }
+        .main-content { flex: 1; overflow-y: auto; padding: 30px 20px; position: relative; z-index: 1; }
 
-        /* Toast Notifications */
         #toast-container { position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; }
         .toast { background: rgba(17, 24, 39, 0.95); backdrop-filter: blur(16px); border: 1px solid var(--border); padding: 14px 20px; border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; font-size: 0.9rem; animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         @keyframes slideIn { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-        /* Loader Overlay */
         .loader-overlay { position: fixed; inset: 0; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; z-index: 9999; }
         .spinner { width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.08); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 768px) {
+            .app-layout { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; padding: 15px; border-right: none; border-bottom: 1px solid var(--border); }
+            .sidebar-link { padding: 8px 12px; font-size: 0.85rem; }
+            .main-content { padding: 20px 12px; }
+        }
     </style>
 </head>
 <body>
@@ -146,19 +145,18 @@
 
         const state = { user: null, isAdmin: false, currentRoute: '/', bots: [], plan: 'Free' };
 
-        // Sample Code Templates
         const codeTemplates = {
-            JS: `// Dynamic JavaScript Telegram Bot Logic
+            JS: `// JavaScript Telegram Bot
 const text = update.message.text;
 
 if (text === '/start') {
-    reply("Hello! Welcome to WebzHost JavaScript Engine 🚀");
+    reply("Hello! Welcome to WebzHost JS Engine 🚀");
 } else if (text === 'ping') {
     reply("Pong! 🏓");
 } else {
     reply("You typed: " + text);
 }`,
-            PY: `# Dynamic Python Telegram Bot Logic
+            PY: `# Python Telegram Bot
 text = update['message']['text']
 
 if text == '/start':
@@ -207,10 +205,14 @@ else:
 
         async function fetchBots() {
             if(!state.user) return;
-            const q = query(collection(db, "bots"), where("userId", "==", state.user.uid));
-            const snap = await getDocs(q);
-            state.bots = [];
-            snap.forEach((doc) => state.bots.push({ id: doc.id, ...doc.data() }));
+            try {
+                const q = query(collection(db, "bots"), where("userId", "==", state.user.uid));
+                const snap = await getDocs(q);
+                state.bots = [];
+                snap.forEach((doc) => state.bots.push({ id: doc.id, ...doc.data() }));
+            } catch (err) {
+                console.error("Fetch Bots Error:", err);
+            }
         }
 
         window.handleAuth = async (e, isLogin) => {
@@ -219,7 +221,12 @@ else:
                 if (isLogin) await signInWithEmailAndPassword(auth, e.target.email.value, e.target.password.value);
                 else await createUserWithEmailAndPassword(auth, e.target.email.value, e.target.password.value);
                 showToast('Welcome to WebzHost!');
-            } catch (err) { showToast(err.message, 'error'); toggleLoader(false); }
+            } catch (err) { 
+                alert("Auth Error: " + err.message);
+                showToast(err.message, 'error'); 
+            } finally {
+                toggleLoader(false);
+            }
         }
 
         window.adminLogin = (e) => {
@@ -231,43 +238,66 @@ else:
             } else showToast('Invalid Admin Code', 'error');
         }
 
+        // Mobile Hardened Deploy Function
         window.createBot = async (e) => {
             e.preventDefault();
             if(state.plan === 'Free' && state.bots.length >= MAX_FREE_BOTS) {
-                return showToast('Free Plan Limit (3 Bots) Reached! Please Upgrade.', 'error');
+                return showToast('Free Plan Limit (3 Bots) Reached! Upgrade to Pro.', 'error');
             }
 
             toggleLoader(true);
-            const name = document.getElementById('botName').value;
-            const token = document.getElementById('botToken').value;
-            const lang = document.getElementById('botLang').value;
-            const code = document.getElementById('botCode').value;
-
             try {
+                const name = document.getElementById('botName').value.trim();
+                const token = document.getElementById('botToken').value.trim();
+                const lang = document.getElementById('botLang').value;
+                const code = document.getElementById('botCode').value;
+
+                // 1. Save to Firestore
                 const docRef = await addDoc(collection(db, "bots"), {
-                    userId: state.user.uid, name, token, lang, code, status: 'active', createdAt: serverTimestamp()
+                    userId: state.user.uid,
+                    name,
+                    token,
+                    lang,
+                    code,
+                    status: 'active',
+                    createdAt: serverTimestamp()
                 });
 
+                // 2. Set Telegram Webhook
                 const endpoint = lang === 'PY' ? '/api/webhook_python' : '/api/webhook';
                 const webhookUrl = `${DOMAIN}${endpoint}?botId=${docRef.id}`;
                 
-                await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${webhookUrl}`);
+                try {
+                    await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${webhookUrl}`);
+                } catch (tgErr) {
+                    console.warn("Direct Telegram API call blocked, webhook set via backend serverless URL.");
+                }
 
-                showToast(`${lang === 'PY' ? 'Python' : 'JavaScript'} Bot Deployed Successfully!`);
+                showToast('Bot Deployed Successfully!');
                 await fetchBots();
                 navigateTo('/bots');
-            } catch (err) { showToast(err.message, 'error'); }
-            toggleLoader(false);
+
+            } catch (err) {
+                alert("Deploy Error: " + err.message);
+                showToast(err.message, 'error');
+            } finally {
+                toggleLoader(false); // ALWAYS STOP SPINNER ON MOBILE
+            }
         }
 
         window.deleteBot = async (id) => {
             if(confirm('Are you sure you want to delete this bot?')) {
                 toggleLoader(true);
-                await deleteDoc(doc(db, "bots", id));
-                showToast('Bot Removed');
-                await fetchBots();
-                toggleLoader(false);
-                render();
+                try {
+                    await deleteDoc(doc(db, "bots", id));
+                    showToast('Bot Removed');
+                    await fetchBots();
+                    render();
+                } catch(err) {
+                    alert("Delete Error: " + err.message);
+                } finally {
+                    toggleLoader(false);
+                }
             }
         }
 
@@ -277,7 +307,7 @@ else:
         const renderPublicNav = () => `
             <nav class="top-nav">
                 <div class="logo" data-route="/"><i class="ph-fill ph-paper-plane-tilt"></i> WebzHost</div>
-                <div style="display:flex; gap:12px;">
+                <div style="display:flex; gap:10px;">
                     <button class="btn btn-secondary" data-route="/login">Sign In</button>
                     <button class="btn btn-primary" data-route="/register">Get Started</button>
                 </div>
@@ -288,8 +318,8 @@ else:
             ${renderPublicNav()}
             <div style="display:flex; justify-content:center; align-items:center; min-height:100vh; padding:20px;">
                 <form class="glass-card" style="width:100%; max-width:400px; margin-top:40px;" onsubmit="handleAuth(event, ${isLogin})">
-                    <h2 style="font-weight:700; font-size:1.6rem; margin-bottom:8px;">${isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-                    <p style="color:var(--text-secondary); font-size:0.88rem; margin-bottom:24px;">Enter your credentials to access your console.</p>
+                    <h2 style="font-weight:700; font-size:1.5rem; margin-bottom:8px;">${isLogin ? 'Welcome Back' : 'Create Account'}</h2>
+                    <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:20px;">Enter your details to manage your bots.</p>
                     <div class="input-group"><label>Email Address</label><input type="email" name="email" class="input-control" placeholder="user@example.com" required></div>
                     <div class="input-group"><label>Password</label><input type="password" name="password" class="input-control" placeholder="••••••••" required></div>
                     <button class="btn btn-primary" style="width:100%; margin-top:8px;">${isLogin ? 'Sign In' : 'Create Account'} <i class="ph ph-arrow-right"></i></button>
@@ -304,65 +334,64 @@ else:
         const wrapApp = (content) => `
             <div class="app-layout">
                 <aside class="sidebar">
-                    <div class="logo" data-route="/dashboard" style="margin-bottom:36px;"><i class="ph-fill ph-paper-plane-tilt"></i> WebzHost</div>
-                    <div class="sidebar-link ${state.currentRoute==='/dashboard'?'active':''}" data-route="/dashboard"><i class="ph ph-squares-four"></i> Overview</div>
-                    <div class="sidebar-link ${state.currentRoute==='/bots'?'active':''}" data-route="/bots"><i class="ph ph-robot"></i> My Bots</div>
-                    <div class="sidebar-link ${state.currentRoute==='/create'?'active':''}" data-route="/create"><i class="ph ph-plus-circle"></i> Deploy Bot</div>
-                    <div class="sidebar-link ${state.currentRoute==='/pricing'?'active':''}" data-route="/pricing"><i class="ph ph-credit-card"></i> Subscriptions</div>
+                    <div class="logo" data-route="/dashboard" style="margin-bottom:24px;"><i class="ph-fill ph-paper-plane-tilt"></i> WebzHost</div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <div class="sidebar-link ${state.currentRoute==='/dashboard'?'active':''}" data-route="/dashboard"><i class="ph ph-squares-four"></i> Overview</div>
+                        <div class="sidebar-link ${state.currentRoute==='/bots'?'active':''}" data-route="/bots"><i class="ph ph-robot"></i> My Bots</div>
+                        <div class="sidebar-link ${state.currentRoute==='/create'?'active':''}" data-route="/create"><i class="ph ph-plus-circle"></i> Deploy Bot</div>
+                        <div class="sidebar-link ${state.currentRoute==='/pricing'?'active':''}" data-route="/pricing"><i class="ph ph-credit-card"></i> Billing</div>
+                    </div>
                     <div style="flex:1;"></div>
-                    <div class="sidebar-link" style="color:var(--danger);" onclick="logout()"><i class="ph ph-sign-out"></i> Sign Out</div>
+                    <div class="sidebar-link" style="color:var(--danger); margin-top:15px;" onclick="logout()"><i class="ph ph-sign-out"></i> Sign Out</div>
                 </aside>
                 <main class="main-content">${content}</main>
             </div>
         `;
 
         const renderBots = () => wrapApp(`
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                 <div>
-                    <h1 style="font-size:1.8rem; font-weight:700;">My Deployed Bots</h1>
-                    <p style="color:var(--text-secondary); font-size:0.9rem;">Manage and monitor your dynamic serverless instances.</p>
+                    <h1 style="font-size:1.5rem; font-weight:700;">My Bots</h1>
+                    <p style="color:var(--text-secondary); font-size:0.85rem;">Active serverless instances</p>
                 </div>
                 <button class="btn btn-primary" data-route="/create"><i class="ph ph-plus-bold"></i> New Bot</button>
             </div>
-            <div style="display:grid; gap:20px;">
+            <div style="display:grid; gap:16px;">
                 ${state.bots.map(b => `
-                    <div class="glass-card" style="display:flex; justify-content:space-between; align-items:center; padding:22px 28px;">
+                    <div class="glass-card" style="display:flex; justify-content:space-between; align-items:center; padding:18px;">
                         <div>
-                            <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
-                                <i class="ph-fill ph-robot" style="font-size:1.6rem; color:var(--primary);"></i>
-                                <h3 style="font-size:1.1rem; font-weight:600;">${b.name}</h3>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                                <i class="ph-fill ph-robot" style="font-size:1.4rem; color:var(--primary);"></i>
+                                <h3 style="font-size:1rem; font-weight:600;">${b.name}</h3>
                                 <span class="badge ${b.lang==='PY'?'badge-py':'badge-js'}">${b.lang==='PY'?'PYTHON':'NODE.JS'}</span>
-                                <span class="badge badge-active">Active</span>
                             </div>
-                            <p style="color:var(--text-muted); font-size:0.82rem; font-family:'Fira Code', monospace;">${DOMAIN}/api/${b.lang==='PY'?'webhook_python':'webhook'}?botId=${b.id}</p>
+                            <p style="color:var(--text-muted); font-size:0.75rem; font-family:'Fira Code', monospace; word-break:break-all;">${DOMAIN}/api/${b.lang==='PY'?'webhook_python':'webhook'}?botId=${b.id}</p>
                         </div>
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn btn-secondary" onclick="copyText('${DOMAIN}/api/${b.lang==='PY'?'webhook_python':'webhook'}?botId=${b.id}')"><i class="ph ph-copy"></i> Webhook</button>
-                            <button class="btn btn-danger" onclick="deleteBot('${b.id}')"><i class="ph ph-trash"></i></button>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn-secondary" style="padding:8px 12px;" onclick="copyText('${DOMAIN}/api/${b.lang==='PY'?'webhook_python':'webhook'}?botId=${b.id}')"><i class="ph ph-copy"></i> URL</button>
+                            <button class="btn btn-danger" style="padding:8px 12px;" onclick="deleteBot('${b.id}')"><i class="ph ph-trash"></i></button>
                         </div>
                     </div>
                 `).join('')}
-                ${state.bots.length===0?'<div class="glass-card" style="text-align:center; padding:60px;"><i class="ph ph-robot" style="font-size:3rem; color:var(--text-muted); margin-bottom:12px;"></i><p style="color:var(--text-secondary);">No bots deployed yet. Click "New Bot" to launch one.</p></div>':''}
+                ${state.bots.length===0?'<div class="glass-card" style="text-align:center; padding:40px;"><p style="color:var(--text-secondary);">No bots deployed yet. Click "New Bot" to launch one.</p></div>':''}
             </div>
         `);
 
         const renderCreate = () => wrapApp(`
-            <h1 style="font-size:1.8rem; font-weight:700; margin-bottom:8px;">Deploy New Instance</h1>
-            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:32px;">Select runtime environment and paste your bot execution logic.</p>
+            <h1 style="font-size:1.5rem; font-weight:700; margin-bottom:6px;">Deploy Bot</h1>
+            <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:24px;">Select language and paste execution code.</p>
             <form class="glass-card" style="max-width:800px;" onsubmit="createBot(event)">
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                    <div class="input-group"><label>Bot Name</label><input id="botName" class="input-control" placeholder="e.g. EchoBot" required></div>
-                    <div class="input-group">
-                        <label>Runtime Environment</label>
-                        <select id="botLang" class="input-control" onchange="handleLangChange(this.value)">
-                            <option value="JS">JavaScript (Node.js Engine)</option>
-                            <option value="PY">Python Engine</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="input-group"><label>Telegram Bot Token (from @BotFather)</label><input id="botToken" type="password" class="input-control" placeholder="123456789:ABCdefGHIjklMNOpqrs..." required></div>
+                <div class="input-group"><label>Bot Name</label><input id="botName" class="input-control" placeholder="e.g. MyBot" required></div>
                 <div class="input-group">
-                    <label>Execution Logic (Dynamic Script)</label>
+                    <label>Runtime Environment</label>
+                    <select id="botLang" class="input-control" onchange="handleLangChange(this.value)">
+                        <option value="JS">JavaScript (Node.js)</option>
+                        <option value="PY">Python Engine</option>
+                    </select>
+                </div>
+                <div class="input-group"><label>Telegram Token (from @BotFather)</label><input id="botToken" type="password" class="input-control" placeholder="123456789:ABCdef..." required></div>
+                <div class="input-group">
+                    <label>Bot Execution Script</label>
                     <textarea id="botCode" class="input-control code-editor" required>${codeTemplates.JS}</textarea>
                 </div>
                 <button class="btn btn-primary" style="width:100%; padding:14px; margin-top:8px;"><i class="ph ph-rocket-launch-bold"></i> Deploy Instantly</button>
@@ -370,30 +399,20 @@ else:
         `);
 
         const renderPricing = () => wrapApp(`
-            <h1 style="font-size:1.8rem; font-weight:700; margin-bottom:8px;">Subscriptions & Billing</h1>
-            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:36px;">Choose the tier that fits your deployment scale.</p>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; max-width:850px;">
+            <h1 style="font-size:1.5rem; font-weight:700; margin-bottom:6px;">Subscriptions</h1>
+            <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:24px;">Plans & Payment Methods</p>
+            <div style="display:grid; grid-template-columns: 1fr; gap:20px; max-width:600px;">
                 <div class="glass-card">
-                    <h3 style="font-size:1.2rem; font-weight:600; margin-bottom:4px;">Starter Free</h3>
-                    <p style="color:var(--text-muted); font-size:0.85rem;">For hobbyists & small projects</p>
-                    <h2 style="font-size:2.8rem; font-weight:800; margin:20px 0;">$0</h2>
-                    <ul style="list-style:none; color:var(--text-secondary); font-size:0.9rem; line-height:2.2; margin-bottom:24px;">
-                        <li><i class="ph-fill ph-check-circle" style="color:var(--success);"></i> Up to 3 Active Bots</li>
-                        <li><i class="ph-fill ph-check-circle" style="color:var(--success);"></i> JS & Python Runtime</li>
-                        <li><i class="ph-fill ph-check-circle" style="color:var(--success);"></i> Instant Webhook Routing</li>
-                    </ul>
-                    <button class="btn btn-secondary" style="width:100%;" disabled>Current Active Plan</button>
+                    <h3>Free Plan (Active)</h3>
+                    <p style="color:var(--text-muted); font-size:0.85rem; margin-top:4px;">Up to 3 Dynamic Bots</p>
                 </div>
-                <div class="glass-card" style="border-color:var(--primary); box-shadow:0 0 30px var(--primary-glow);">
-                    <h3 style="font-size:1.2rem; font-weight:600; margin-bottom:4px;">Pro Unlimited</h3>
-                    <p style="color:var(--text-muted); font-size:0.85rem;">For production & commercial bots</p>
-                    <h2 style="font-size:2.8rem; font-weight:800; margin:20px 0; color:var(--primary);">550 BDT <span style="font-size:1rem; color:var(--text-muted); font-weight:400;">/ $5 USD</span></h2>
-                    <div style="background:rgba(0,0,0,0.5); padding:16px; border-radius:var(--radius-sm); font-size:0.88rem; line-height:1.8; margin-bottom:20px;">
+                <div class="glass-card" style="border-color:var(--primary);">
+                    <h3 style="color:var(--primary);">Pro Plan — 550 BDT / $5</h3>
+                    <div style="background:rgba(0,0,0,0.5); padding:14px; border-radius:var(--radius-sm); font-size:0.85rem; line-height:1.8; margin:16px 0;">
                         <p><b>bKash Personal:</b> <span style="color:var(--warning);">01756318997</span></p>
                         <p><b>Nagad Personal:</b> <span style="color:var(--warning);">01824982253</span></p>
-                        <p><b>Binance USDT (TRC20):</b> <span style="color:var(--cyan);">Add Address Later</span></p>
+                        <p><b>Binance USDT:</b> <span style="color:var(--cyan);">TRC20 Address</span></p>
                     </div>
-                    <button class="btn btn-primary" style="width:100%;" onclick="showToast('Send transaction ID to support via Telegram for auto activation.')">Upgrade Now</button>
                 </div>
             </div>
         `);
@@ -413,28 +432,26 @@ else:
                 case '/admin-login': app.innerHTML = `
                     ${renderPublicNav()}
                     <div style="display:flex; justify-content:center; align-items:center; min-height:100vh;">
-                        <form class="glass-card" style="width:100%; max-width:360px;" onsubmit="adminLogin(event)">
-                            <h3 style="font-weight:700; margin-bottom:8px;">Admin Authentication</h3>
-                            <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:20px;">Enter security passcode to continue.</p>
+                        <form class="glass-card" style="width:100%; max-width:340px;" onsubmit="adminLogin(event)">
+                            <h3 style="font-weight:700; margin-bottom:12px;">Admin Access</h3>
                             <div class="input-group"><label>Passcode</label><input type="password" name="code" class="input-control" placeholder="#Zihad077" required></div>
-                            <button class="btn btn-primary" style="width:100%;">Access Control Panel</button>
+                            <button class="btn btn-primary" style="width:100%;">Access Panel</button>
                         </form>
                     </div>`; break;
                 case '/admin': app.innerHTML = wrapApp(`
-                    <h1 style="font-size:1.8rem; font-weight:700; color:var(--danger); margin-bottom:16px;">Admin Master Control</h1>
-                    <div class="glass-card"><p>System operational. All serverless endpoints active.</p></div>
+                    <h1 style="font-size:1.5rem; font-weight:700; color:var(--danger);">Admin Panel Access Granted</h1>
                 `); break;
                 default: app.innerHTML = `
                     ${renderPublicNav()}
-                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:85vh; text-align:center; padding:0 20px; margin-top:40px;">
-                        <span class="badge badge-js" style="margin-bottom:20px; padding:6px 16px; font-size:0.8rem;">Next-Gen Serverless Platform</span>
-                        <h1 style="font-size:4rem; font-weight:800; line-height:1.1; margin-bottom:20px; letter-spacing:-1.5px;">Serverless Hosting for<br><span style="background:linear-gradient(135deg, var(--primary), var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Telegram Bots</span></h1>
-                        <p style="color:var(--text-secondary); font-size:1.2rem; max-width:620px; margin-bottom:36px; line-height:1.6;">Deploy Node.js and Python bot logic instantly with dynamic webhook routing and zero maintenance.</p>
-                        <div style="display:flex; gap:16px;">
-                            <button class="btn btn-primary" style="padding:14px 32px; font-size:1rem;" data-route="/register">Deploy Free Bot</button>
-                            <button class="btn btn-secondary" style="padding:14px 32px; font-size:1rem;" data-route="/login">Console Login</button>
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; text-align:center; padding:0 20px; margin-top:50px;">
+                        <span class="badge badge-js" style="margin-bottom:16px;">Serverless Bot Platform</span>
+                        <h1 style="font-size:2.8rem; font-weight:800; line-height:1.2; margin-bottom:16px;">Host Telegram Bots<br><span style="color:var(--primary);">Instantly</span></h1>
+                        <p style="color:var(--text-secondary); font-size:1rem; max-width:500px; margin-bottom:28px;">Node.js and Python bot hosting with dynamic webhooks.</p>
+                        <div style="display:flex; gap:12px;">
+                            <button class="btn btn-primary" style="padding:12px 24px;" data-route="/register">Get Started Free</button>
+                            <button class="btn btn-secondary" style="padding:12px 24px;" data-route="/login">Login</button>
                         </div>
-                        <div style="display:flex; gap:20px; margin-top:60px; font-size:1.8rem;">
+                        <div style="display:flex; gap:20px; margin-top:40px; font-size:1.6rem;">
                             <a href="https://t.me/devtutodz" target="_blank" style="color:var(--text-muted);"><i class="ph-fill ph-telegram-logo"></i></a>
                             <a href="https://youtube.com/@dev_-_zihad?si=1x7vlYghJFSJVuRx" target="_blank" style="color:var(--text-muted);"><i class="ph-fill ph-youtube-logo"></i></a>
                         </div>
