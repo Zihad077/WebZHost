@@ -92,17 +92,18 @@
 
         const appFirebase = initializeApp(firebaseConfig);
         const auth = getAuth(appFirebase);
-        const db = getFirestore(appFirebase);
+        
+        // 🎯 FIX: Connect directly to your custom named database "webzhost"
+        const db = getFirestore(appFirebase, "webzhost");
 
         const DOMAIN = "https://webzhost.vercel.app";
         const state = { user: null, isAdmin: false, currentRoute: '/', bots: [] };
 
-        // ⏱️ FORCE TIMEOUT HELPER (5 Seconds Limit)
-        const withTimeout = (promise, ms = 5000) => {
+        const withTimeout = (promise, ms = 6000) => {
             return Promise.race([
                 promise,
                 new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("Firebase Database Connection Timed Out (5s). Check Firebase Console > Firestore Database status.")), ms)
+                    setTimeout(() => reject(new Error("Database Timeout. Please check connection.")), ms)
                 )
             ]);
         };
@@ -120,8 +121,8 @@
         };
 
         window.addEventListener('unhandledrejection', (event) => {
-            const reason = event.reason ? (event.reason.message || JSON.stringify(event.reason)) : "Unknown Async Error";
-            window.showBigError("Async Error Caught", reason);
+            const reason = event.reason ? (event.reason.message || JSON.stringify(event.reason)) : "Unknown Error";
+            window.showBigError("Database Error", reason);
         });
 
         window.onerror = function(msg, url, lineNo) {
@@ -129,20 +130,20 @@
             return false;
         };
 
-        // ⚡ TEST DATABASE CONNECTION WITH 5s TIMEOUT
+        // ⚡ TEST DATABASE CONNECTION
         window.testDatabaseConnection = async () => {
             window.toggleLoader(true);
             try {
                 const docRef = await withTimeout(
                     addDoc(collection(db, "test_collection"), {
-                        testMessage: "Firebase Connection Successful!",
+                        testMessage: "Connected to webzhost database!",
                         time: serverTimestamp()
                     }),
-                    5000
+                    6000
                 );
-                alert("🎉 SUCCESS! Firebase Firestore is Working!\n\nDocument ID: " + docRef.id);
+                alert("🎉 SUCCESS! Connected to 'webzhost' Database!\n\nDocument ID: " + docRef.id + "\n\nNow check Firebase Console!");
             } catch (err) {
-                window.showBigError("Database Connection Failed", err.message);
+                window.showBigError("Connection Failed", err.message);
             } finally {
                 window.toggleLoader(false);
             }
@@ -183,7 +184,7 @@
             if(!state.user) return;
             try {
                 const q = query(collection(db, "bots"), where("userId", "==", state.user.uid));
-                const snap = await withTimeout(getDocs(q), 5000);
+                const snap = await withTimeout(getDocs(q), 6000);
                 state.bots = [];
                 snap.forEach((doc) => state.bots.push({ id: doc.id, ...doc.data() }));
             } catch (err) {
@@ -216,12 +217,11 @@
 
             toggleLoader(true);
             try {
-                // Save to Firestore with 5s Timeout Protection
                 const docRef = await withTimeout(
                     addDoc(collection(db, "bots"), {
                         userId: state.user.uid, name, token, lang, code, status: 'active', createdAt: serverTimestamp()
                     }),
-                    5000
+                    6000
                 );
 
                 const endpoint = lang === 'PY' ? '/api/webhook_python' : '/api/webhook';
