@@ -32,10 +32,8 @@ try:
             })
             firebase_admin.initialize_app(cred)
 
-            try:
-                db = firestore.client(database='webzhost')
-            except Exception:
-                db = firestore.client()
+    # FIX APPLIED: Connect directly to named database 'webzhost' via database_id parameter
+    db = firestore.client(database_id='webzhost')
 
 except Exception as e:
     init_error = f"Python Import/Init Error: {str(e)}"
@@ -91,7 +89,6 @@ class handler(BaseHTTPRequestHandler):
             token = bot_data.get('token')
             code = bot_data.get('code')
 
-            # Execution & Auto Error Feedback Logic
             if 'message' in update and 'text' in update['message']:
                 chat_id = update['message']['chat']['id']
 
@@ -110,7 +107,6 @@ class handler(BaseHTTPRequestHandler):
                     "print": print
                 }
 
-                # Try executing Python code; if code fails, send error to Telegram!
                 try:
                     exec(code, sandbox)
                 except Exception as py_err:
