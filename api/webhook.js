@@ -2,7 +2,8 @@
 const admin = require('firebase-admin');
 
 // ================================================================
-// 🔥 Service Account JSON (Hardcoded)
+// 🔥 তোমার Service Account JSON (Hardcoded)
+// এখানে private_key-এর মধ্যে \n ঠিকমতো আছে—কোনো পরিবর্তন করবে না
 // ================================================================
 const serviceAccount = {
   "type": "service_account",
@@ -29,10 +30,10 @@ try {
       credential: admin.credential.cert(serviceAccount)
     });
   }
-  // 🔥 সঠিক পদ্ধতি: admin.firestore() + settings
   db = admin.firestore();
-  db.settings({ databaseId: 'webzhost' });  // ডেটাবেস আইডি সেট করুন
-  console.log("✅ Firebase initialized with DB: webzhost");
+  // ডেটাবেস আইডি 'webzhost' সেট করো
+  db.settings({ databaseId: 'webzhost' });
+  console.log("✅ Firebase connected with DB: webzhost");
 } catch (e) {
   initError = "Firebase init error: " + e.message;
   console.error(initError);
@@ -44,23 +45,17 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  console.log("📩 Webhook called");
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (initError) {
-    console.error("❌ Init error:", initError);
     return res.status(500).json({ error: initError });
   }
 
   try {
     const botId = req.query.botId;
-    if (!botId) {
-      return res.status(400).json({ error: 'botId missing' });
-    }
-    console.log("🔍 botId:", botId);
+    if (!botId) return res.status(400).json({ error: 'botId missing' });
 
     const docRef = db.collection('bots').doc(botId);
     const doc = await docRef.get();
@@ -70,43 +65,52 @@ module.exports = async (req, res) => {
     }
 
     const bot = doc.data();
-    const { code, lang, token } = bot;
-    console.log("✅ Bot found:", bot.name);
+    const { token, code, lang } = bot;
 
-    // ---------- Execute user code ----------
+    // ---------- ইউজারের কোড এক্সিকিউট ----------
     if (lang === 'JS') {
-      const sandbox = { console, fetch: require('node-fetch') };
+      const sandbox = {
+        console: console,
+        fetch: require('node-fetch'),
+        botToken: token,
+        botId: botId
+      };
+
       const func = new Function('sandbox', 'req', 'res', 'update', `
         try {
-          const { console, fetch } = sandbox;
+          const { console, fetch, botToken, botId } = sandbox;
+          // ইউজারের কোড এখানে রান হবে
           ${code}
         } catch (err) {
           console.error('User code error:', err);
           throw err;
         }
       `);
+
       const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Execution timeout (5s)')), 5000)
+        setTimeout(() => reject(new Error('Execution timeout')), 5000)
       );
+
       await Promise.race([
         func(sandbox, req, res, req.body),
         timeout
       ]);
+
     } else if (lang === 'PY') {
-      return res.status(400).json({ error: 'Python not supported in this endpoint' });
+      return res.status(400).json({ error: 'Python not supported in /api/webhook' });
     } else {
       return res.status(400).json({ error: `Unsupported language: ${lang}` });
     }
 
-    // Update last activity
     await docRef.update({
       lastActivity: admin.firestore.FieldValue.serverTimestamp(),
       webhookStatus: 'connected'
     });
 
     return res.status(200).send('OK');
+
   } catch (error) {
-    console.error("❌ Webhook error:", error);
+    console.error('❌ Webhook error:', error);
     return res.status(500).json({ error: error.message, stack: error.stack });
   }
 };
