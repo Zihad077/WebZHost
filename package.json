@@ -1,9 +1,17 @@
 {
-  "name": "webzhost-serverless",
-  "version": "1.0.0",
-  "description": "Telegram Dynamic Bot Hosting Platform",
-  "main": "index.html",
+  "name": "webzhost",
+  "version": "2.0.0",
+  "description": "Telegram Bot Hosting Platform",
+  "main": "index.js",
+  "scripts": {
+    "start": "vercel dev"
+  },
   "dependencies": {
-    "firebase-admin": "^12.0.0"
+    "firebase-admin": "^11.11.0",
+    "node-fetch": "^2.6.7",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 }
