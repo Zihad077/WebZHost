@@ -11,13 +11,11 @@ module.exports = async (req, res) => {
       const chatId = message.chat.id;
       const text = message.text || '';
 
-      // ✅ ইমেজ জেনারেট করার জন্য শুধু /image কমান্ড
+      // ✅ ইমেজ জেনারেট কমান্ড
       if (text.startsWith('/image')) {
-        // প্রম্পট বের করা (কমান্ডের পরের অংশ)
         const prompt = text.replace('/image', '').trim();
 
         if (!prompt) {
-          // প্রম্পট না দিলে হেল্প মেসেজ
           await sendMessage(chatId, '❌ দয়া করে একটি প্রম্পট দিন।\nউদাহরণ: `/image a beautiful sunset`');
           return res.status(200).send('OK');
         }
@@ -26,29 +24,25 @@ module.exports = async (req, res) => {
         await sendMessage(chatId, `🎨 আপনার ছবি তৈরি হচ্ছে: *"${prompt}"*`, 'Markdown');
 
         try {
-          // 🔥 Pollinations.ai থেকে ছবি তৈরি
+          // 🔥 Pollinations.ai URL (সরাসরি)
           const encodedPrompt = encodeURIComponent(prompt);
           const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux`;
 
-          // ছবিটি ডাউনলোড করে ইউজারকে পাঠানো
-          const response = await fetch(imageUrl);
-          const imageBuffer = await response.arrayBuffer();
-          const base64Image = Buffer.from(imageBuffer).toString('base64');
-
-          // টেলিগ্রামে ছবি পাঠানো (ইনপুট মিডিয়া হিসেবে)
-          await sendPhoto(chatId, base64Image);
+          // ⚠️ URL টি টেলিগ্রামকে পাঠান (টেলিগ্রাম নিজেই ডাউনলোড করবে)
+          await sendPhoto(chatId, imageUrl);
 
         } catch (error) {
-          console.error('Image generation error:', error);
+          console.error('Image error:', error);
           await sendMessage(chatId, '❌ ছবি তৈরি করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
         }
 
         return res.status(200).send('OK');
       }
 
-      // ✅ অন্যান্য কমান্ড (start, help)
+      // ✅ হেল্প কমান্ড
       if (text === '/start' || text === '/help') {
-        await sendMessage(chatId, `🤖 *AI Image Generator Bot*\n\n` +
+        await sendMessage(chatId, 
+          `🤖 *AI Image Generator Bot*\n\n` +
           `📌 *কমান্ডসমূহ:*\n` +
           `/image [প্রম্পট] - AI দিয়ে ছবি তৈরি করুন\n` +
           `/help - এই মেসেজ দেখুন\n\n` +
@@ -58,7 +52,7 @@ module.exports = async (req, res) => {
         return res.status(200).send('OK');
       }
 
-      // ✅ অন্য কোনো মেসেজ ইগনোর
+      // ✅ অন্য মেসেজ ইগনোর
       return res.status(200).send('OK');
     }
 
@@ -82,7 +76,7 @@ async function sendMessage(chatId, text, parseMode = null) {
   });
 }
 
-async function sendPhoto(chatId, base64Image) {
+async function sendPhoto(chatId, photoUrl) {
   const token = "8654064192:AAEiQkzclDSo_ls1Ct4NyEzEE968DLmQFBc";
   const url = `https://api.telegram.org/bot${token}/sendPhoto`;
   await fetch(url, {
@@ -90,7 +84,7 @@ async function sendPhoto(chatId, base64Image) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id: chatId,
-      photo: `data:image/jpeg;base64,${base64Image}`
+      photo: photoUrl  // 🔥 সরাসরি URL
     })
   });
 }
