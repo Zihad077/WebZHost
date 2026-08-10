@@ -2,7 +2,7 @@
 const admin = require('firebase-admin');
 
 // ================================================================
-// 🔥 আপনার Firebase Service Account JSON (Hardcoded)
+// 🔥 আপনার Service Account JSON (Hardcoded)
 // ================================================================
 const serviceAccount = {
   "type": "service_account",
@@ -17,6 +17,7 @@ const serviceAccount = {
   "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40bothostz.iam.gserviceaccount.com",
   "universe_domain": "googleapis.com"
 };
+
 // ================================================================
 
 let db = null;
@@ -28,11 +29,9 @@ try {
       credential: admin.credential.cert(serviceAccount)
     });
   }
-
-  // 🔥 সঠিক ডেটাবেস আইডি (webzhost) ব্যবহার করুন
   const { getFirestore } = require('firebase-admin/firestore');
-  db = getFirestore('webzhost');
-  console.log("✅ Firebase connected to database: webzhost");
+  db = getFirestore('webzhost'); // ✅ সঠিক ডেটাবেস আইডি
+  console.log("✅ Firebase initialized with database: webzhost");
 } catch (e) {
   initError = "Firebase init error: " + e.message;
   console.error(initError);
@@ -43,27 +42,38 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  console.log("📩 Webhook called with method:", req.method);
+  console.log("📩 Query params:", req.query);
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
   if (initError) {
+    console.error("❌ Init error:", initError);
     return res.status(500).json({ error: initError });
   }
 
   try {
     const botId = req.query.botId;
     if (!botId) {
+      console.error("❌ botId missing");
       return res.status(400).json({ error: 'botId missing' });
     }
+    console.log("🔍 Looking for botId:", botId);
 
-    // ডেটাবেস থেকে বট ডকুমেন্ট খুঁজুন
+    // ডকুমেন্ট খুঁজুন
     const docRef = db.collection('bots').doc(botId);
     const doc = await docRef.get();
+
     if (!doc.exists) {
+      console.error("❌ Bot not found for ID:", botId);
       return res.status(404).json({ error: `Bot not found for ID: ${botId}` });
     }
 
     const bot = doc.data();
+    console.log("✅ Bot found:", bot.name);
     const { code, lang, token } = bot;
 
     // (ঐচ্ছিক) টোকেন ভেরিফাই
@@ -71,9 +81,13 @@ module.exports = async (req, res) => {
       try {
         const check = await fetch(`https://api.telegram.org/bot${token}/getMe`);
         const data = await check.json();
-        if (!data.ok) console.warn('Token may be invalid');
+        if (!data.ok) {
+          console.warn("⚠️ Token may be invalid:", data.description);
+        } else {
+          console.log("✅ Token verified, bot username:", data.result.username);
+        }
       } catch (e) {
-        console.warn('Token verify failed:', e.message);
+        console.warn("Token verify failed:", e.message);
       }
     }
 
@@ -84,6 +98,7 @@ module.exports = async (req, res) => {
         fetch: require('node-fetch')
       };
 
+      console.log("⚡ Executing user JS code...");
       const func = new Function('sandbox', 'req', 'res', 'update', `
         try {
           const { console, fetch } = sandbox;
@@ -104,23 +119,26 @@ module.exports = async (req, res) => {
         func(sandbox, req, res, req.body),
         timeout
       ]);
+      console.log("✅ User code executed successfully.");
 
     } else if (lang === 'PY') {
-      return res.status(400).json({ error: 'Python not supported in /api/webhook, use /api/webhook_python' });
+      return res.status(400).json({ error: 'Python not supported in /api/webhook' });
     } else {
       return res.status(400).json({ error: `Unsupported language: ${lang}` });
     }
 
-    // শেষ অ্যাক্টিভিটি আপডেট
+    // Last activity আপডেট
     await docRef.update({
       lastActivity: admin.firestore.FieldValue.serverTimestamp(),
       webhookStatus: 'connected'
     });
+    console.log("✅ Webhook status updated to connected.");
 
     return res.status(200).send('OK');
 
   } catch (error) {
-    console.error('Webhook error:', error);
-    return res.status(500).json({ error: error.message || 'Internal server error' });
+    console.error("❌ Webhook error:", error);
+    // পুরো error stack পাঠান
+    return res.status(500).json({ error: error.message, stack: error.stack });
   }
 };
