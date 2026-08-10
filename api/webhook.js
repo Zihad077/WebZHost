@@ -2,7 +2,7 @@
 const admin = require('firebase-admin');
 
 // ================================================================
-// 🔥 আপনার Service Account JSON (Hardcoded)
+// 🔥 Service Account JSON (Hardcoded)
 // ================================================================
 const serviceAccount = {
   "type": "service_account",
@@ -29,9 +29,10 @@ try {
       credential: admin.credential.cert(serviceAccount)
     });
   }
-  const { getFirestore } = require('firebase-admin/firestore');
-  db = getFirestore('webzhost'); // ✅ সঠিক ডেটাবেস আইডি
-  console.log("✅ Firebase initialized with database: webzhost");
+  // 🔥 সঠিক পদ্ধতি: admin.firestore() + settings
+  db = admin.firestore();
+  db.settings({ databaseId: 'webzhost' });  // ডেটাবেস আইডি সেট করুন
+  console.log("✅ Firebase initialized with DB: webzhost");
 } catch (e) {
   initError = "Firebase init error: " + e.message;
   console.error(initError);
@@ -43,8 +44,7 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  console.log("📩 Webhook called with method:", req.method);
-  console.log("📩 Query params:", req.query);
+  console.log("📩 Webhook called");
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -58,87 +58,55 @@ module.exports = async (req, res) => {
   try {
     const botId = req.query.botId;
     if (!botId) {
-      console.error("❌ botId missing");
       return res.status(400).json({ error: 'botId missing' });
     }
-    console.log("🔍 Looking for botId:", botId);
+    console.log("🔍 botId:", botId);
 
-    // ডকুমেন্ট খুঁজুন
     const docRef = db.collection('bots').doc(botId);
     const doc = await docRef.get();
 
     if (!doc.exists) {
-      console.error("❌ Bot not found for ID:", botId);
-      return res.status(404).json({ error: `Bot not found for ID: ${botId}` });
+      return res.status(404).json({ error: `Bot not found: ${botId}` });
     }
 
     const bot = doc.data();
-    console.log("✅ Bot found:", bot.name);
     const { code, lang, token } = bot;
+    console.log("✅ Bot found:", bot.name);
 
-    // (ঐচ্ছিক) টোকেন ভেরিফাই
-    if (token) {
-      try {
-        const check = await fetch(`https://api.telegram.org/bot${token}/getMe`);
-        const data = await check.json();
-        if (!data.ok) {
-          console.warn("⚠️ Token may be invalid:", data.description);
-        } else {
-          console.log("✅ Token verified, bot username:", data.result.username);
-        }
-      } catch (e) {
-        console.warn("Token verify failed:", e.message);
-      }
-    }
-
-    // ---------- ইউজারের কোড এক্সিকিউট করুন ----------
+    // ---------- Execute user code ----------
     if (lang === 'JS') {
-      const sandbox = {
-        console: console,
-        fetch: require('node-fetch')
-      };
-
-      console.log("⚡ Executing user JS code...");
+      const sandbox = { console, fetch: require('node-fetch') };
       const func = new Function('sandbox', 'req', 'res', 'update', `
         try {
           const { console, fetch } = sandbox;
-          // ইউজারের কোড এখানে রান হবে
           ${code}
         } catch (err) {
-          console.error('Bot code error:', err);
+          console.error('User code error:', err);
           throw err;
         }
       `);
-
-      // ৫ সেকেন্ড টাইমআউট
       const timeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Execution timeout (5s)')), 5000)
       );
-
       await Promise.race([
         func(sandbox, req, res, req.body),
         timeout
       ]);
-      console.log("✅ User code executed successfully.");
-
     } else if (lang === 'PY') {
-      return res.status(400).json({ error: 'Python not supported in /api/webhook' });
+      return res.status(400).json({ error: 'Python not supported in this endpoint' });
     } else {
       return res.status(400).json({ error: `Unsupported language: ${lang}` });
     }
 
-    // Last activity আপডেট
+    // Update last activity
     await docRef.update({
       lastActivity: admin.firestore.FieldValue.serverTimestamp(),
       webhookStatus: 'connected'
     });
-    console.log("✅ Webhook status updated to connected.");
 
     return res.status(200).send('OK');
-
   } catch (error) {
     console.error("❌ Webhook error:", error);
-    // পুরো error stack পাঠান
     return res.status(500).json({ error: error.message, stack: error.stack });
   }
 };
