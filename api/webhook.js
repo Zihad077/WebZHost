@@ -1,7 +1,7 @@
 // api/webhook.js
 const admin = require('firebase-admin');
 
-// ---------- Firebase Initialization ----------
+// ---------- Firebase Initialization (সঠিক ডেটাবেস সহ) ----------
 let db = null;
 let initError = null;
 
@@ -11,7 +11,7 @@ try {
   const projectId = process.env.FIREBASE_PROJECT_ID || "bothostz";
 
   if (!privateKey || !clientEmail) {
-    initError = "Missing FIREBASE_PRIVATE_KEY or FIREBASE_CLIENT_EMAIL in env";
+    initError = "Missing FIREBASE_PRIVATE_KEY or FIREBASE_CLIENT_EMAIL";
   } else if (!admin.apps.length) {
     admin.initializeApp({
       credential: admin.credential.cert({
@@ -20,10 +20,13 @@ try {
         privateKey: privateKey.replace(/\\n/g, '\n')
       })
     });
-    db = admin.firestore();  // ✅ সঠিক সিনট্যাক্স
-    console.log("✅ Firebase initialized (JS)");
+    // 🔥 গুরুত্বপূর্ণ: ডেটাবেস আইডি সেট করুন (যেটা ফ্রন্টএন্ডে ব্যবহার করেছেন)
+    db = admin.firestore();
+    db.settings({ databaseId: 'webzhost' });  // ← এই লাইন যোগ করুন
+    console.log("✅ Firebase initialized with database: webzhost");
   } else {
     db = admin.firestore();
+    db.settings({ databaseId: 'webzhost' });
   }
 } catch (e) {
   initError = "Firebase init error: " + e.message;
@@ -32,7 +35,6 @@ try {
 
 // ---------- Webhook Handler ----------
 module.exports = async (req, res) => {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
 
@@ -41,7 +43,6 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Check Firebase init
   if (initError) {
     return res.status(500).json({ error: initError });
   }
@@ -50,51 +51,51 @@ module.exports = async (req, res) => {
     const botId = req.query.botId;
     if (!botId) return res.status(400).json({ error: 'botId missing' });
 
-    // Fetch bot data
-    const doc = await db.collection('bots').doc(botId).get();
-    if (!doc.exists) return res.status(404).json({ error: 'Bot not found' });
+    // ডকুমেন্ট খুঁজুন
+    const docRef = db.collection('bots').doc(botId);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      // ডকুমেন্ট না পেলে ক্লিয়ার মেসেজ দিন
+      return res.status(404).json({ error: `Bot not found for ID: ${botId}` });
+    }
 
     const bot = doc.data();
     const { code, lang, token } = bot;
 
-    // Token verification (optional but recommended)
+    // (ঐচ্ছিক) টোকেন ভেরিফাই
     if (token) {
       try {
         const check = await fetch(`https://api.telegram.org/bot${token}/getMe`);
         const data = await check.json();
         if (!data.ok) {
-          return res.status(400).json({ error: 'Bot token invalid or revoked' });
+          console.warn('Token may be invalid');
         }
-      } catch (e) {
-        console.warn('Token verify failed:', e.message);
-      }
+      } catch (e) { /* ignore */ }
     }
 
-    // ---------- Execute bot code ----------
+    // ---------- ইউজারের কোড এক্সিকিউট করুন ----------
     if (lang === 'JS') {
-      // Safe execution using Function constructor (no vm)
+      // Simple execution using Function constructor
       const sandbox = {
         console: console,
         fetch: require('node-fetch'),
-        // You can add more safe modules here
+        // টেলিগ্রাম API কল সহজ করতে একটি হেল্পার ফাংশন যোগ করতে পারেন
       };
 
-      // Wrap code inside a function
       const func = new Function('sandbox', 'req', 'res', 'update', `
         try {
           const { console, fetch } = sandbox;
-          // User code starts here
+          // ইউজারের কোড এখানে আসবে
           ${code}
-          // User code ends here
         } catch (err) {
           console.error('Bot code error:', err);
           throw err;
         }
       `);
 
-      // Execute with 5 seconds timeout
+      // ৫ সেকেন্ড টাইমআউট
       const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Bot execution timeout (5s)')), 5000)
+        setTimeout(() => reject(new Error('Execution timeout')), 5000)
       );
       await Promise.race([
         func(sandbox, req, res, req.body),
@@ -102,17 +103,13 @@ module.exports = async (req, res) => {
       ]);
 
     } else if (lang === 'PY') {
-      // For Python, call the Python webhook endpoint internally
-      // But simpler: just call the Python function via HTTP (if deployed separately)
-      return res.status(400).json({
-        error: 'Python webhook should be called via /api/webhook_python'
-      });
+      return res.status(400).json({ error: 'Python webhook not implemented here' });
     } else {
       return res.status(400).json({ error: `Unsupported language: ${lang}` });
     }
 
-    // Update last activity
-    await db.collection('bots').doc(botId).update({
+    // Last activity আপডেট
+    await docRef.update({
       lastActivity: admin.firestore.FieldValue.serverTimestamp(),
       webhookStatus: 'connected'
     });
