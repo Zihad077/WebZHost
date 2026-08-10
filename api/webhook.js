@@ -11,48 +11,40 @@ module.exports = async (req, res) => {
       const chatId = message.chat.id;
       const text = message.text || '';
 
-      // ✅ ইমেজ জেনারেট কমান্ড
-      if (text.startsWith('/image')) {
-        const prompt = text.replace('/image', '').trim();
-
-        if (!prompt) {
-          await sendMessage(chatId, '❌ দয়া করে একটি প্রম্পট দিন।\nউদাহরণ: `/image a beautiful sunset`');
-          return res.status(200).send('OK');
-        }
-
-        // ⏳ প্রসেসিং মেসেজ
-        await sendMessage(chatId, `🎨 আপনার ছবি তৈরি হচ্ছে: *"${prompt}"*`, 'Markdown');
-
-        try {
-          // 🔥 Pollinations.ai URL (সরাসরি)
-          const encodedPrompt = encodeURIComponent(prompt);
-          const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux`;
-
-          // ⚠️ URL টি টেলিগ্রামকে পাঠান (টেলিগ্রাম নিজেই ডাউনলোড করবে)
-          await sendPhoto(chatId, imageUrl);
-
-        } catch (error) {
-          console.error('Image error:', error);
-          await sendMessage(chatId, '❌ ছবি তৈরি করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
-        }
-
-        return res.status(200).send('OK');
-      }
-
-      // ✅ হেল্প কমান্ড
+      // 🔥 বিশেষ কমান্ড (start, help)
       if (text === '/start' || text === '/help') {
         await sendMessage(chatId, 
           `🤖 *AI Image Generator Bot*\n\n` +
-          `📌 *কমান্ডসমূহ:*\n` +
-          `/image [প্রম্পট] - AI দিয়ে ছবি তৈরি করুন\n` +
-          `/help - এই মেসেজ দেখুন\n\n` +
+          `📌 *কীভাবে ব্যবহার করবেন:*\n` +
+          `যেকোনো টেক্সট মেসেজ পাঠান, আমি সেটার জন্য AI-জেনারেটেড ছবির লিংক পাঠাব।\n\n` +
           `📝 *উদাহরণ:*\n` +
-          `/image a beautiful sunset over the ocean`
+          `"a cute cat" লিখলেই ছবির URL পাবেন।\n` +
+          `"a beautiful sunset" লিখলেও পাবেন।\n\n` +
+          `🛠️ কমান্ড:\n` +
+          `/help - এই সাহায্য দেখুন`
         , 'Markdown');
         return res.status(200).send('OK');
       }
 
-      // ✅ অন্য মেসেজ ইগনোর
+      // ⚠️ যদি মেসেজ খালি না হয়
+      if (text.trim()) {
+        // 📝 পুরো মেসেজটিকে প্রম্পট হিসেবে নিচ্ছি
+        const prompt = text.trim();
+        const encodedPrompt = encodeURIComponent(prompt);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true`;
+
+        // 📤 শুধু URL পাঠান
+        await sendMessage(chatId, 
+          `🎨 *আপনার প্রম্পটের জন্য ছবি তৈরি হয়েছে!*\n\n` +
+          `📝 *প্রম্পট:* ${prompt}\n` +
+          `🔗 *ছবির লিংক:*\n${imageUrl}\n\n` +
+          `💡 লিংকে ক্লিক করে ছবি দেখুন।`
+        , 'Markdown');
+
+        return res.status(200).send('OK');
+      }
+
+      // অন্য কিছু (যেমন ইমোজি বা ফাঁকা) ইগনোর
       return res.status(200).send('OK');
     }
 
@@ -63,7 +55,7 @@ module.exports = async (req, res) => {
   }
 };
 
-// ---------- হেল্পার ফাংশন ----------
+// ---------- হেল্পার ----------
 async function sendMessage(chatId, text, parseMode = null) {
   const token = "8654064192:AAEiQkzclDSo_ls1Ct4NyEzEE968DLmQFBc";
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
@@ -73,18 +65,5 @@ async function sendMessage(chatId, text, parseMode = null) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  });
-}
-
-async function sendPhoto(chatId, photoUrl) {
-  const token = "8654064192:AAEiQkzclDSo_ls1Ct4NyEzEE968DLmQFBc";
-  const url = `https://api.telegram.org/bot${token}/sendPhoto`;
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      photo: photoUrl  // 🔥 সরাসরি URL
-    })
   });
 }
