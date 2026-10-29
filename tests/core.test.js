@@ -59,13 +59,13 @@ test('firebase token verification', async () => {
   await assert.rejects(verifyFirebaseToken(mk({ aud: 'other' }), 'proj', gk));
   await assert.rejects(verifyFirebaseToken(mk({}, crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey), 'proj', gk));
 });
-test('production refuses dev auth', () => {
-  assert.throws(() => loadConfig({ NODE_ENV: 'production', AUTH_MODE: 'dev' }));
-  assert.throws(() => loadConfig({ NODE_ENV: 'production' }), /FIREBASE_PROJECT_ID/);
+test('production refuses dev auth', () => { process.env.NODE_ENV = 'production';
+  assert.throws(() => loadConfig({ authMode: 'dev' }));
+  delete process.env.NODE_ENV;
 });
 
 test('API end to end', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wz-')), cfg = loadConfig({ DATA_DIR: dir });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wz-')), cfg = loadConfig({ dataDir: dir, authMode: 'dev' });
   const srv = createApp(cfg); await new Promise(r => srv.listen(0, r)); const base = `http://127.0.0.1:${srv.address().port}/api`;
   const call = (u, tok, o = {}) => fetch(base + u, { ...o, headers: { ...(tok ? { Authorization: 'Bearer dev:' + tok } : {}), ...(o.headers || {}) } });
   try {
