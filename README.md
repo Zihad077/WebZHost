@@ -7,17 +7,18 @@ Control panel for Python and Node.js projects (including Telegram bots). Zero np
 - **API server**: `server.js` + `lib/` (needs a persistent disk, so it does **not** run on Vercel functions).
 - **Runtime adapter**: `lib/runtime.js`. The API never runs user code. Connect an execution server to start projects.
 
-## Run locally (no accounts, no cost)
-    npm start          # http://localhost:3000, dev sign-in (any name)
+## Settings
+Everything is hardcoded. No .env. Edit `lib/config.js` (server) and `config.js` (website API address).
+
+## Run locally
+    # in lib/config.js set authMode: 'dev', then:
+    npm start          # http://localhost:3000
     npm test
 
 ## Deploy
-1. Firebase console: enable Email/Password sign-in. Copy project id, web API key, auth domain, app id.
-2. Run the API on a server with a disk. Copy `.env.example` to `.env`, fill it in, `NODE_ENV=production node server.js`. Put it behind HTTPS.
-3. Set `ALLOWED_ORIGIN` to your Vercel URL. Edit `config.js`: `window.WEBZ_API = 'https://your-api'`.
-4. Deploy this folder to Vercel (static). Add your API URL to `connect-src` in `vercel.json` if you want it stricter.
-
-Production refuses `AUTH_MODE=dev`. Tokens are verified server side (Firebase RS256).
+1. Firebase console: enable Email/Password sign-in.
+2. Run the API on a server with a disk: `NODE_ENV=production node server.js`, behind HTTPS.
+3. In `config.js` set `window.WEBZ_API` to that server's URL. Deploy the folder to Vercel (frontend).
 
 ## Execution server contract (optional)
 Set `RUNTIME_URL` and `RUNTIME_SECRET`. The API calls, with `Authorization: Bearer <secret>`:
