@@ -1,8 +1,8 @@
 {
   "name": "webzhost",
   "version": "2.0.0",
-  "description": "WebZHost 2.0: project hosting control panel (zero dependencies)",
-  "scripts": { "start": "node server.js", "test": "node --test tests/core.test.js" },
+  "description": "WebZHost 2.0: project hosting control panel (Vercel + Firestore, zero dependencies)",
+  "scripts": { "test": "node --test tests/core.test.js" },
   "engines": { "node": ">=18" },
   "license": "UNLICENSED"
 }

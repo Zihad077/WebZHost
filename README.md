@@ -1,34 +1,23 @@
-# WebZHost 2.0
+# WebZHost 2.0 (Vercel + Firestore)
 
-Control panel for Python and Node.js projects (including Telegram bots). Zero npm dependencies. Node 18+.
+One project on Vercel. No server, no .env, zero npm packages.
 
-## What it is
-- **Frontend**: `index.html`, `app.js`, `config.js` (static, deploy on Vercel).
-- **API server**: `server.js` + `lib/` (needs a persistent disk, so it does **not** run on Vercel functions).
-- **Runtime adapter**: `lib/runtime.js`. The API never runs user code. Connect an execution server to start projects.
+- Website: `index.html`, `app.js`, `config.js`
+- API: `api/[...path].js` (Vercel function) + `lib/`
+- Data: Firestore database `webzhost` (collection `wz_projects`)
+- Settings: hardcoded in `lib/config.js`
 
-## Settings
-Everything is hardcoded. No .env. Edit `lib/config.js` (server) and `config.js` (website API address).
+## Setup (once)
+1. Firebase console > Firestore > database `webzhost` > Rules: paste `firestore.rules` and Publish.
+   This replaces old rules. The old `bots` collection is no longer used.
+2. Firebase console > Authentication: Email/Password enabled; `webzhost.vercel.app` in Authorized domains.
+3. Push this folder to GitHub. Vercel deploys it.
 
-## Run locally
-    # in lib/config.js set authMode: 'dev', then:
-    npm start          # http://localhost:3000
-    npm test
+## Limits (Vercel + Firestore)
+Upload 4 MB. File 700 KB. 200 files. 5 MB unpacked. Backup 700 KB zipped.
+Projects cannot run: Vercel cannot keep programs alive. Start/stop/logs say "not connected".
+`lib/runtime.js` can talk to your own execution server later (`runtimeUrl`, `runtimeSecret` in `lib/config.js`).
 
-## Deploy
-1. Firebase console: enable Email/Password sign-in.
-2. Run the API on a server with a disk: `NODE_ENV=production node server.js`, behind HTTPS.
-3. In `config.js` set `window.WEBZ_API` to that server's URL. Deploy the folder to Vercel (frontend).
-
-## Execution server contract (optional)
-Set `RUNTIME_URL` and `RUNTIME_SECRET`. The API calls, with `Authorization: Bearer <secret>`:
-`GET /v1/projects/:id/status` → `{state}`, `GET .../logs` → text, `POST .../start|stop|restart` with `{startCommand,type}`.
-The runner must isolate code (container or VM, CPU/RAM limits, restricted network). Not included.
-
-## Security notes
-- Old code had a hard-coded Telegram token and a client-side admin passcode. Both are removed. **Rotate that bot token and passcode anyway**: they are in your git history.
-- Old Firestore rules may still let clients read bot tokens. Lock them down or delete the `bots` collection.
-- Uploads are validated in memory (traversal, symlinks, bombs, CRC). File paths are jailed. Rate limits are in memory per process.
-
-## Limits
-Backup/projects live on local disk: back up `DATA_DIR`. Single process only.
+## Security
+Browser calls the API with a Firebase sign-in token. The API checks it, then talks to Firestore with the same token, so the rules limit every user to their own projects. No secret keys are stored. Uploads are checked in memory and never run.
+Old code had a hard-coded bot token and a client-side admin passcode. Both are gone. Rotate them anyway.
