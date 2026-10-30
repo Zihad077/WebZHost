@@ -2,8 +2,8 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('fs'), os = require('os'), path = require('path'), crypto = require('crypto');
 const { readZip, writeZip } = require('../lib/zip'), { analyze } = require('../lib/analyze'), { analyzeLogs } = require('../lib/logs');
-const { safeJoin } = require('../lib/util'), { verifyFirebaseToken } = require('../lib/auth'), { loadConfig } = require('../lib/config');
-const { createApp } = require('../server'), TEMPLATES = require('../lib/templates');
+const { cleanRel } = require('../lib/util'), { verifyFirebaseToken } = require('../lib/auth'), { loadConfig } = require('../lib/config');
+const { createApp } = require('../lib/app'), { fakeFirestore } = require('./fake-firestore'), TEMPLATES = require('../lib/templates');
 const F = (name, s) => ({ name, dir: false, data: Buffer.from(s) });
 
 test('zip round trip', () => {
@@ -40,11 +40,9 @@ test('log analyzer groups and explains', () => {
   assert.equal(r.findings[0].title, 'Missing Python package'); assert.match(r.findings[0].fix, /telegram/);
   assert.equal(r.repeated[0].count, 3);
 });
-test('safeJoin blocks traversal and symlink escape', () => {
-  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'sj-')), out = fs.mkdtempSync(path.join(os.tmpdir(), 'out-'));
-  fs.symlinkSync(out, path.join(d, 'link'));
-  for (const p of ['../x', '/etc/passwd', 'a\\b', 'link/x', 'a\0b']) assert.throws(() => safeJoin(d, p), /Invalid path/);
-  assert.ok(safeJoin(d, 'ok/file.txt').startsWith(d));
+test('cleanRel blocks traversal and odd paths', () => {
+  for (const p of ['../x', 'a/../b', '/etc/passwd', 'a\\b', 'a\0b', 'a//b', './x', 'C:/x']) assert.throws(() => cleanRel(p), /Invalid path/);
+  assert.equal(cleanRel('ok/file.txt'), 'ok/file.txt'); assert.equal(cleanRel('', true), ''); assert.throws(() => cleanRel(''));
 });
 test('firebase token verification', async () => {
   const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -64,39 +62,49 @@ test('production refuses dev auth', () => { process.env.NODE_ENV = 'production';
   delete process.env.NODE_ENV;
 });
 
-test('API end to end', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wz-')), cfg = loadConfig({ dataDir: dir, authMode: 'dev' });
+test('API end to end (fake Firestore)', async () => {
+  const fake = fakeFirestore(); await new Promise(r => fake.srv.listen(0, r));
+  const cfg = loadConfig({ authMode: 'dev', firestoreBase: `http://127.0.0.1:${fake.srv.address().port}/v1`, firebase: { projectId: 'p' }, databaseId: 'd' });
   const srv = createApp(cfg); await new Promise(r => srv.listen(0, r)); const base = `http://127.0.0.1:${srv.address().port}/api`;
   const call = (u, tok, o = {}) => fetch(base + u, { ...o, headers: { ...(tok ? { Authorization: 'Bearer dev:' + tok } : {}), ...(o.headers || {}) } });
   try {
     assert.equal((await call('/projects')).status, 401);
-    const bad = await call('/projects?name=bad', 'alice', { method: 'POST', body: writeZip([F('../x', 'y')]) });
-    assert.equal(bad.status, 400);
-    const noEntry = await call('/projects?name=empty', 'alice', { method: 'POST', body: writeZip([F('r.txt', 'x')]) });
-    assert.equal(noEntry.status, 422);
+    assert.equal((await call('/projects?name=bad', 'alice', { method: 'POST', body: writeZip([F('../x', 'y')]) })).status, 400);
+    assert.equal((await call('/projects?name=empty', 'alice', { method: 'POST', body: writeZip([F('r.txt', 'x')]) })).status, 422);
+    assert.equal((await call('/projects?name=big', 'alice', { method: 'POST', body: writeZip([F('main.py', crypto.randomBytes(800 * 1024).toString('hex'))]) })).status, 413);
+    const up = await call('/projects?name=Zipped', 'alice', { method: 'POST', body: writeZip([F('x/main.py', 'print(1)'), F('x/requirements.txt', 'requests\n')]) });
+    assert.equal(up.status, 201);
     const c = await call('/projects?name=Bot1&template=python-bot', 'alice', { method: 'POST' });
-    assert.equal(c.status, 201); const { meta } = await c.json(); const id = meta.id;
-    assert.equal((await call('/projects/' + id, 'bob')).status, 404);               // cross-user
+    assert.equal(c.status, 201); const id = (await c.json()).meta.id;
+    assert.equal((await (await call('/projects', 'alice')).json()).length, 2);
+    assert.equal((await (await call('/projects', 'bob')).json()).length, 0);
+    assert.equal((await call('/projects/' + id, 'bob')).status, 404);
     assert.equal((await call('/projects/' + id + '/files?path=main.py', 'bob')).status, 404);
     assert.equal((await call('/projects/' + id + '/files?path=../../meta.json', 'alice')).status, 400);
     assert.equal((await call('/projects/' + id + '/files?path=main.py', 'alice')).status, 200);
     assert.equal((await call('/projects/' + id + '/files?path=notes/a.txt', 'alice', { method: 'PUT', body: 'hi' })).status, 200);
-    assert.equal((await call('/projects/' + id + '/start', 'alice', { method: 'POST' })).status, 501); // honest: no runtime
+    const dir = await (await call('/projects/' + id + '/files?path=notes', 'alice')).json();
+    assert.equal(dir.entries[0].name, 'a.txt');
+    const root = await (await call('/projects/' + id + '/files', 'alice')).json();
+    assert.ok(root.entries.some(e => e.name === 'notes' && e.dir));
+    assert.equal((await call('/projects/' + id + '/start', 'alice', { method: 'POST' })).status, 501);
     assert.equal((await (await call('/projects/' + id, 'alice')).json()).runtime.state, 'unknown');
-    // backup + restore
     const b = await (await call('/projects/' + id + '/backups', 'alice', { method: 'POST' })).json();
+    assert.equal((await call('/projects/' + id + '/backups', 'bob')).status, 404);
     await call('/projects/' + id + '/files?path=main.py', 'alice', { method: 'DELETE' });
-    const r = await call(`/projects/${id}/backups/${b.id}/restore`, 'alice', { method: 'POST', body: '{"confirm":true}' });
-    assert.equal(r.status, 200);
-    assert.equal((await call('/projects/' + id + '/files?path=main.py', 'alice')).status, 200);
+    assert.equal((await call('/projects/' + id + '/files?path=main.py', 'alice')).status, 404);
     assert.equal((await call(`/projects/${id}/backups/${b.id}/restore`, 'alice', { method: 'POST', body: '{}' })).status, 400);
-    // corrupt backup must not replace live files
-    const bf = path.join(dir, 'projects', id, 'backups', b.id + '.zip'); const z = fs.readFileSync(bf); z[45] ^= 0xff; fs.writeFileSync(bf, z);
-    const bad2 = await call(`/projects/${id}/backups/${b.id}/restore`, 'alice', { method: 'POST', body: '{"confirm":true}' });
-    assert.equal(bad2.status, 400);
+    assert.equal((await call(`/projects/${id}/backups/${b.id}/restore`, 'alice', { method: 'POST', body: '{"confirm":true}' })).status, 200);
     assert.equal((await call('/projects/' + id + '/files?path=main.py', 'alice')).status, 200);
+    // corrupt backup must not replace live files
+    const key = `wz_projects/${id}/backups/${b.id}`, raw = Buffer.from(fake.docs.get(key).data.stringValue, 'base64'); raw[45] ^= 0xff;
+    fake.docs.get(key).data.stringValue = raw.toString('base64');
+    await call('/projects/' + id + '/files?path=main.py', 'alice', { method: 'DELETE' });
+    assert.equal((await call(`/projects/${id}/backups/${b.id}/restore`, 'alice', { method: 'POST', body: '{"confirm":true}' })).status, 400);
+    assert.equal((await call('/projects/' + id + '/files?path=main.py', 'alice')).status, 404);   // still unchanged
     assert.equal((await call('/projects/' + id + '?confirm=yes', 'bob', { method: 'DELETE' })).status, 404);
     assert.equal((await call('/projects/' + id, 'alice', { method: 'DELETE' })).status, 400);
     assert.equal((await call('/projects/' + id + '?confirm=yes', 'alice', { method: 'DELETE' })).status, 200);
-  } finally { srv.close(); }
+    assert.ok(![...fake.docs.keys()].some(k => k.startsWith('wz_projects/' + id)));   // nothing left behind
+  } finally { srv.close(); fake.srv.close(); }
 });
